@@ -4,3 +4,16 @@ pandas
 plotly
 sqlalchemy
 python-dotenv 
+
+
+
+# python==3.10.11
+# streamlit==1.43.2
+# snowflake-connector-python==3.14.0
+# pandas==2.2.3
+# plotly==6.0.1
+# sqlalchemy==2.0.40
+# python-dotenv==1.1.0
+
+
+

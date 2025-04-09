@@ -27,7 +27,6 @@ with st.sidebar:
     st.image("Logo1.png", width=120)  # Optional: Add your company logo here
     st.markdown("---") 
 
-
     st.sidebar.markdown("## 🔍 Schema Selection")
 
     # sqlite_schemas = ['main']  # SQLite doesn't really use schemas like Snowflake, but keep it uniform
