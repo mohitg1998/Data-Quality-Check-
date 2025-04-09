@@ -1,56 +1,60 @@
 import pandas as pd
 
-def get_table_row_count(conn, table_name, source='sqlite'):
-    """
-    Returns the row count for the given table.
-    Works for both SQLite and Snowflake by aliasing the count column.
-    """
-    query = f"SELECT COUNT(*) AS count FROM {table_name}"
-    df = pd.read_sql_query(query, conn)
-    # return first value regardless of column name
-    return df.iloc[0, 0]    
+def get_sqlserver_databases(conn):
+    query = "SELECT name FROM sys.databases WHERE database_id > 4"
+    return pd.read_sql(query, conn)['name'].tolist()
 
-def get_sample_data(conn, table_name, n=20, source='sqlite'):
-    query = f"SELECT * FROM {table_name} LIMIT {n}"
-    df = pd.read_sql_query(query, conn)
-    return df
+def get_sqlserver_schemas(conn):
+    query = """ SELECT s.name, p.name AS owner_name, p.type_desc
+            FROM sys.schemas s
+            LEFT JOIN sys.database_principals p ON s.principal_id = p.principal_id
+            WHERE p.name = 'dbo' AND s.name != 'dbo'
+            ORDER BY s.name
+            """
+    return pd.read_sql(query, conn)['name'].tolist()
 
-def get_table_schema(conn, table_name, source='sqlite'):
-    if source == 'sqlite':
-        query = f"PRAGMA table_info({table_name});"
-        schema = pd.read_sql_query(query, conn)
-        return schema[['name', 'type', 'notnull', 'dflt_value']]
+def get_table_list(conn, source='sqlserver', schema='EXL_SCHEMA'):
+    if source == 'sqlserver':
+        query = f"""
+        SELECT TABLE_NAME 
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = '{schema}'
+        """
+        return pd.read_sql(query, conn)['TABLE_NAME'].tolist()
+    elif source == 'snowflake':
+        query = f"SHOW TABLES IN SCHEMA {schema}"
+        return pd.read_sql(query, conn)['name'].tolist()
+
+def get_table_row_count(conn, table_name, source='sqlserver', schema='EXL_SCHEMA'):
+    if source in ['sqlserver', 'snowflake']:
+        query = f'SELECT COUNT(*) AS "count" FROM {schema}.{table_name}'
+        return pd.read_sql(query, conn)['count'].iloc[0]
+    else:
+        raise ValueError("Unsupported source. Use 'sqlserver' or 'snowflake'.")
+
+def get_table_schema(conn, table_name, source='sqlserver', schema='EXL_SCHEMA'):
+    if source == 'sqlserver':
+        query = f"""
+        SELECT UPPER(COLUMN_NAME) AS COLUMN_NAME, UPPER(DATA_TYPE) AS DATA_TYPE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = '{schema}' AND TABLE_NAME = '{table_name}'
+        ORDER BY COLUMN_NAME
+        """
     elif source == 'snowflake':
         query = f"""
-        SELECT column_name, data_type, is_nullable
-        FROM information_schema.columns
-        WHERE table_name = '{table_name.upper()}'
-        ORDER BY ordinal_position;
+        SELECT UPPER(COLUMN_NAME) AS COLUMN_NAME, UPPER(DATA_TYPE) AS DATA_TYPE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = '{schema.upper()}' AND TABLE_NAME = '{table_name.upper()}'
+        ORDER BY COLUMN_NAME
         """
-        schema = pd.read_sql_query(query, conn)
-        return schema
     else:
         raise ValueError("Unsupported source type.")
 
-def get_snowflake_schemas(conn):
-    """
-    Returns a list of available schemas in the connected Snowflake database.
-    """
-    query = "SELECT schema_name FROM information_schema.schemata"
-    df = pd.read_sql_query(query, conn)
-    return sorted(df['SCHEMA_NAME'].tolist())
+    return pd.read_sql(query, conn)
 
-
-def get_table_list(conn, source='sqlite', schema=''):
-    if source == 'sqlite':
-        query = "SELECT name FROM sqlite_master WHERE type='table';"
-        df = pd.read_sql_query(query, conn)
-        return df['name'].tolist()
+def get_sample_data(conn, table_name, n=100, source='sqlserver', schema='EXL_SCHEMA'):
+    if source == 'sqlserver':
+        query = f"SELECT TOP {n} * FROM {schema}.{table_name}"
     elif source == 'snowflake':
-        query = f"""
-        SELECT LOWER(table_name) AS name
-        FROM information_schema.tables
-        WHERE table_schema = '{schema.upper()}'
-        """
-        df = pd.read_sql_query(query, conn)
-        return df['NAME'].tolist()
+        query = f"SELECT * FROM {schema}.{table_name} LIMIT {n}"
+    return pd.read_sql(query, conn)

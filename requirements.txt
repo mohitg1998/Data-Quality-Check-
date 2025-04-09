@@ -4,6 +4,7 @@ pandas
 plotly
 sqlalchemy
 python-dotenv 
+pyodbc
 
 
 

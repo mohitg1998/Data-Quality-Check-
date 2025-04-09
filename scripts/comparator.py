@@ -1,4 +1,4 @@
 import pandas as pd
 
-def compare_row_counts(count_source, count_target):
-    return count_source == count_target, count_source, count_target
+def compare_row_counts(count1, count2):
+    return count1 == count2, count1, count2
