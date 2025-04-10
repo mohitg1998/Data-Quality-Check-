@@ -58,3 +58,15 @@ def get_sample_data(conn, table_name, n=100, source='sqlserver', schema='EXL_SCH
     elif source == 'snowflake':
         query = f"SELECT * FROM {schema}.{table_name} LIMIT {n}"
     return pd.read_sql(query, conn)
+
+# scripts/data_fetcher.py
+
+def get_snowflake_databases(conn):
+    query = "SHOW DATABASES"
+    df = pd.read_sql(query, conn)
+    return df['name'].tolist()
+
+def get_snowflake_schemas(conn):
+    query = "SHOW SCHEMAS"
+    df = pd.read_sql(query, conn)
+    return df['name'].tolist()

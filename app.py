@@ -24,8 +24,16 @@ with st.sidebar:
 
     selected_db = st.selectbox("Select a SQL Server Database", db_list)
 
-    if selected_db not in db_list:
-        st.warning(f"Selected database '{selected_db}' not found in SQL Server.")
+    # Snowflake Connection
+    try:
+        conn_snowflake = get_snowflake_connection(database=selected_db)
+    except Exception as e:
+        st.warning("Snowflake connection not configured.")
+
+    sf_db_list = data_fetcher.get_snowflake_databases(conn_snowflake)
+
+    if selected_db not in sf_db_list:
+        st.warning(f"Selected database '{selected_db}' not found in Snowflake.")
         st.stop()
 
     # Step 2: Connect to the selected DB
@@ -34,9 +42,15 @@ with st.sidebar:
     # Step 3: Fetch schemas and tables
     schemas = data_fetcher.get_sqlserver_schemas(conn_sqlserver)
     selected_schema = st.selectbox("Select a Schema", schemas)
+    sf_schemas = data_fetcher.get_snowflake_schemas(conn_snowflake)
 
     if selected_schema not in schemas:
         st.warning(f"Schema '{selected_schema}' not found in the selected database.")
+        conn_sqlserver.close()
+        st.stop()
+
+    if selected_schema not in sf_schemas:
+        st.warning(f"Selected Schema '{selected_schema}' not found in Snowflake.")
         conn_sqlserver.close()
         st.stop()
 
@@ -51,11 +65,6 @@ with st.sidebar:
         st.stop()
 
     st.markdown("---")
-
-    try:
-        conn_snowflake = get_snowflake_connection()
-    except Exception as e:
-        st.warning("Snowflake connection not configured.")
 
     if conn_snowflake:
         tables_snowflake = data_fetcher.get_table_list(conn_snowflake, source='snowflake', schema=selected_schema)
