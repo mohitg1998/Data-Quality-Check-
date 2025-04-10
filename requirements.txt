@@ -5,6 +5,7 @@ plotly
 sqlalchemy
 python-dotenv 
 pyodbc
+xlsxwriter 
 
 
 
@@ -15,6 +16,6 @@ pyodbc
 # plotly==6.0.1
 # sqlalchemy==2.0.40
 # python-dotenv==1.1.0
-
-
+# pyodbc==4.0.34
+#xlsxwriter==3.2.2
 

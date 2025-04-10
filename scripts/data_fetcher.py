@@ -18,7 +18,7 @@ def get_table_list(conn, source='sqlserver', schema='EXL_SCHEMA'):
         query = f"""
         SELECT TABLE_NAME 
         FROM INFORMATION_SCHEMA.TABLES 
-        WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = '{schema}'
+        WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = '{schema}' ORDER BY TABLE_NAME
         """
         return pd.read_sql(query, conn)['TABLE_NAME'].tolist()
     elif source == 'snowflake':
