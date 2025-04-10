@@ -109,101 +109,102 @@ with col2:
 if st.session_state.get("generate_summary", False):
     st.header("📄 Full Schema-Level Summary Report")
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        for table in common_tables:
-            # st.write(f"Processing: {table}")
-            row_source = data_fetcher.get_table_row_count(conn_sqlserver, table, 'sqlserver', selected_schema)
-            row_target = data_fetcher.get_table_row_count(conn_snowflake, table, 'snowflake', selected_schema)
-            match, count_source, count_target = comparator.compare_row_counts(row_source, row_target)
+    with st.expander("Table's Summary"):
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            for table in common_tables:
+                # st.write(f"Processing: {table}")
+                row_source = data_fetcher.get_table_row_count(conn_sqlserver, table, 'sqlserver', selected_schema)
+                row_target = data_fetcher.get_table_row_count(conn_snowflake, table, 'snowflake', selected_schema)
+                match, count_source, count_target = comparator.compare_row_counts(row_source, row_target)
 
-            schema_source = data_fetcher.get_table_schema(conn_sqlserver, table, 'sqlserver', selected_schema)
-            schema_target = data_fetcher.get_table_schema(conn_snowflake, table, 'snowflake', selected_schema)
-            column_match = schema_source.shape[0] == schema_target.shape[0]
+                schema_source = data_fetcher.get_table_schema(conn_sqlserver, table, 'sqlserver', selected_schema)
+                schema_target = data_fetcher.get_table_schema(conn_snowflake, table, 'snowflake', selected_schema)
+                column_match = schema_source.shape[0] == schema_target.shape[0]
 
-            sample_source = data_fetcher.get_sample_data(conn_sqlserver, table, 120, 'sqlserver', selected_schema)
-            sample_target = data_fetcher.get_sample_data(conn_snowflake, table, 120, 'snowflake', selected_schema)
-            dup_sql = quality_checks.check_duplicates(sample_source)
-            dup_sf = quality_checks.check_duplicates(sample_target)
-            null_sql = quality_checks.check_nulls(sample_source).round(0)
-            null_sf = quality_checks.check_nulls(sample_target).round(0)
+                sample_source = data_fetcher.get_sample_data(conn_sqlserver, table, 120, 'sqlserver', selected_schema)
+                sample_target = data_fetcher.get_sample_data(conn_snowflake, table, 120, 'snowflake', selected_schema)
+                dup_sql = quality_checks.check_duplicates(sample_source)
+                dup_sf = quality_checks.check_duplicates(sample_target)
+                null_sql = quality_checks.check_nulls(sample_source).round(0)
+                null_sf = quality_checks.check_nulls(sample_target).round(0)
 
-            null_sql.index = null_sql.index.str.upper()
-            null_sf.index = null_sf.index.str.upper()
-            null_df = pd.concat([null_sql, null_sf], axis=1).fillna(0)
-            null_df.columns = ["SQL Server (%)", "Snowflake (%)"]
-            null_df["Difference"] = (null_df["SQL Server (%)"] - null_df["Snowflake (%)"]).abs().astype(int)
-            null_df = null_df.astype(int).reset_index().rename(columns={"index": "Column Name"})
+                null_sql.index = null_sql.index.str.upper()
+                null_sf.index = null_sf.index.str.upper()
+                null_df = pd.concat([null_sql, null_sf], axis=1).fillna(0)
+                null_df.columns = ["SQL Server (%)", "Snowflake (%)"]
+                null_df["Difference"] = (null_df["SQL Server (%)"] - null_df["Snowflake (%)"]).abs().astype(int)
+                null_df = null_df.astype(int).reset_index().rename(columns={"index": "Column Name"})
 
-            ## View Data
-            st.markdown("---") 
-            st.subheader(f"📊 Summary Report - {table}")
+                ## View Data
+                st.markdown("---") 
+                st.subheader(f"📊 Summary Report - {table}")
 
-            sample_source = data_fetcher.get_sample_data(conn_sqlserver, table, n=120, source='sqlserver',schema=selected_schema)
-            sample_target = data_fetcher.get_sample_data(conn_snowflake, table, n=120, source='snowflake',schema=selected_schema)
-            duplicates_sql = quality_checks.check_duplicates(sample_source)
-            duplicates_snowflake = quality_checks.check_duplicates(sample_target)
+                sample_source = data_fetcher.get_sample_data(conn_sqlserver, table, n=120, source='sqlserver',schema=selected_schema)
+                sample_target = data_fetcher.get_sample_data(conn_snowflake, table, n=120, source='snowflake',schema=selected_schema)
+                duplicates_sql = quality_checks.check_duplicates(sample_source)
+                duplicates_snowflake = quality_checks.check_duplicates(sample_target)
 
-            summary_data = {
-                "Check": [
-                    "Table Presence in Both DBs",
-                    "Row Count Match",
-                    "Column Count Match",
-                    "Duplicate Rows (SQL Server)",
-                    "Duplicate Rows (Snowflake)"
-                ],
-                "Result": [
-                    "✅ Present in both" if table in common_tables else "❌ Missing in one",
-                    "✅ Match" if match else "❌ Mismatch",
-                    "✅ Match" if schema_source.shape[0] == schema_target.shape[0] else "❌ Mismatch",
-                    f"{duplicates_sql} duplicates",
-                    f"{duplicates_snowflake} duplicates"
-                ]
-            }
-            summary_df = pd.DataFrame(summary_data)
-            st.dataframe(summary_df, use_container_width=True)
+                summary_data = {
+                    "Check": [
+                        "Table Presence in Both DBs",
+                        "Row Count Match",
+                        "Column Count Match",
+                        "Duplicate Rows (SQL Server)",
+                        "Duplicate Rows (Snowflake)"
+                    ],
+                    "Result": [
+                        "✅ Present in both" if table in common_tables else "❌ Missing in one",
+                        "✅ Match" if match else "❌ Mismatch",
+                        "✅ Match" if schema_source.shape[0] == schema_target.shape[0] else "❌ Mismatch",
+                        f"{duplicates_sql} duplicates",
+                        f"{duplicates_snowflake} duplicates"
+                    ]
+                }
+                summary_df = pd.DataFrame(summary_data)
+                st.dataframe(summary_df, use_container_width=True)
 
-            st.markdown("### 🧪 Null Value Comparison (Source vs Target)")
-            # Get null percentages and round to 0 decimals
-            nulls_sqlserver = quality_checks.check_nulls(sample_source).round(0)
-            nulls_snowflake = quality_checks.check_nulls(sample_target).round(0)
+                st.markdown("##### 🧪 Null Value Comparison (Source vs Target)")
+                # Get null percentages and round to 0 decimals
+                nulls_sqlserver = quality_checks.check_nulls(sample_source).round(0)
+                nulls_snowflake = quality_checks.check_nulls(sample_target).round(0)
 
-                # Standardize column names to uppercase
-            nulls_sqlserver.index = nulls_sqlserver.index.str.upper()
-            nulls_snowflake.index = nulls_snowflake.index.str.upper()
+                    # Standardize column names to uppercase
+                nulls_sqlserver.index = nulls_sqlserver.index.str.upper()
+                nulls_snowflake.index = nulls_snowflake.index.str.upper()
 
-                # Combine and compare
-            null_comparison = pd.concat([nulls_sqlserver, nulls_snowflake], axis=1)
-            null_comparison.columns = ['SQL Server (%)', 'Snowflake (%)']
+                    # Combine and compare
+                null_comparison = pd.concat([nulls_sqlserver, nulls_snowflake], axis=1)
+                null_comparison.columns = ['SQL Server (%)', 'Snowflake (%)']
 
-                # Replace NaN with 0 before calculating difference
-            null_comparison.fillna(0, inplace=True)
+                    # Replace NaN with 0 before calculating difference
+                null_comparison.fillna(0, inplace=True)
 
-                # Calculate and cast
-            null_comparison['Difference'] = (null_comparison['SQL Server (%)'] - null_comparison['Snowflake (%)']).abs().astype(int)
-            null_comparison[['SQL Server (%)', 'Snowflake (%)']] = null_comparison[['SQL Server (%)', 'Snowflake (%)']].astype(int)
+                    # Calculate and cast
+                null_comparison['Difference'] = (null_comparison['SQL Server (%)'] - null_comparison['Snowflake (%)']).abs().astype(int)
+                null_comparison[['SQL Server (%)', 'Snowflake (%)']] = null_comparison[['SQL Server (%)', 'Snowflake (%)']].astype(int)
 
-                # Prepare for display
-            null_comparison.reset_index(inplace=True)
-            null_comparison.rename(columns={'index': 'Column Name'}, inplace=True)
+                    # Prepare for display
+                null_comparison.reset_index(inplace=True)
+                null_comparison.rename(columns={'index': 'Column Name'}, inplace=True)
 
-                # Highlight differences
-            def highlight_diff(val):
-                return 'background-color: red' if val > 0 else ''
+                    # Highlight differences
+                def highlight_diff(val):
+                    return 'background-color: red' if val > 0 else ''
 
-            # Display with highlighting
-            st.dataframe(null_comparison.style.applymap(highlight_diff, subset=['Difference']), use_container_width=True)
+                # Display with highlighting
+                st.dataframe(null_comparison.style.applymap(highlight_diff, subset=['Difference']), use_container_width=True)
 
-            summary_df = pd.DataFrame({
-                "Metric": [
-                    "Row Count Source", "Row Count Target", "Row Count Match",
-                    "Column Count Match", "Duplicates SQL Server", "Duplicates Snowflake"
-                ],
-                "Value": [
-                    count_source, count_target, match, column_match, dup_sql, dup_sf
-                ]
-            })
-            summary_df.to_excel(writer, sheet_name=table[:31], index=False, startrow=0)
-            null_df.to_excel(writer, sheet_name=table[:31], index=False, startrow=10)
+                summary_df = pd.DataFrame({
+                    "Metric": [
+                        "Row Count Source", "Row Count Target", "Row Count Match",
+                        "Column Count Match", "Duplicates SQL Server", "Duplicates Snowflake"
+                    ],
+                    "Value": [
+                        count_source, count_target, match, column_match, dup_sql, dup_sf
+                    ]
+                })
+                summary_df.to_excel(writer, sheet_name=table[:31], index=False, startrow=0)
+                null_df.to_excel(writer, sheet_name=table[:31], index=False, startrow=10)
 
     output.seek(0)
 
@@ -318,7 +319,7 @@ else:
     summary_df = pd.DataFrame(summary_data)
     st.dataframe(summary_df, use_container_width=True)
 
-    st.markdown("### 🧪 Null Value Comparison (Source vs Target)")
+    st.markdown("##### 🧪 Null Value Comparison (Source vs Target)")
     # Get null percentages and round to 0 decimals
     nulls_sqlserver = quality_checks.check_nulls(sample_source).round(0)
     nulls_snowflake = quality_checks.check_nulls(sample_target).round(0)
