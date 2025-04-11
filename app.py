@@ -298,7 +298,7 @@ else:
     st.dataframe(nulls_df_sf, use_container_width=True)
 
     st.markdown("---") 
-    st.subheader("📊 Summary Report")
+    st.subheader(f"📊 Summary Report - {selected_table}")
 
     summary_data = {
         "Check": [
