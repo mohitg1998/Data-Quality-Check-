@@ -240,10 +240,11 @@ else:
 
     st.markdown("---")
 
-    st.subheader("Schema Comparison")
+    st.subheader("Column Count Comparison")
     schema_source = data_fetcher.get_table_schema(conn_sqlserver, selected_table, source='sqlserver',schema=selected_schema)
     schema_target = data_fetcher.get_table_schema(conn_snowflake, selected_table, source='snowflake',schema=selected_schema)
-
+    st.write(f"**Source (SQL Server):** {schema_source.shape[0]} columns")
+    st.write(f"**Target (Snowflake):** {schema_target.shape[0]} columns")
     if schema_source.shape[0] == schema_target.shape[0]:
         st.success("Column counts match!")
     else:
@@ -270,12 +271,12 @@ else:
     with col1:
         st.markdown("**Duplicate Row Count (SQL Server):**")
         duplicates_sql = quality_checks.check_duplicates(sample_source)
-        st.write(duplicates_sql)
+        st.write(f'🔁 {duplicates_sql}')
 
     with col2:
         st.markdown("**Duplicate Row Count (Snowflake):**")
         duplicates_snowflake = quality_checks.check_duplicates(sample_target)
-        st.write(duplicates_snowflake)
+        st.write(f'🔁 {duplicates_snowflake}')
 
     st.markdown("---")
     # Data Quality Checks on source
